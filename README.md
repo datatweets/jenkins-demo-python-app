@@ -36,6 +36,7 @@ A sample Python application demonstrating CI/CD pipeline with Jenkins on Google 
 |-- .pylintrc                  # Pylint configuration
 |-- .gitignore                 # Git ignore patterns
 |-- tutorial.md                # Jenkins setup tutorial
+|-- jenkinsfile-tutorial.md    # Jenkinsfile deep-dive guide
 +-- README.md                  # This file
 ```
 
@@ -48,6 +49,15 @@ For detailed setup instructions, see [tutorial.md](tutorial.md) which includes:
 - Running your first build
 - Accessing build reports and artifacts
 - Jenkins CLI commands
+
+For understanding Jenkinsfile and pipeline concepts, see [jenkinsfile-tutorial.md](jenkinsfile-tutorial.md) which covers:
+
+- What is a Jenkinsfile and why we need it
+- Pipeline as Code benefits
+- Declarative vs Scripted syntax
+- Step-by-step breakdown of each pipeline stage
+- Best practices and common patterns
+- Troubleshooting guide
 
 ## Local Development Setup
 
