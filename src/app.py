@@ -18,7 +18,7 @@ def multiply(a, b):
 
 def main():
     """Main entry point"""
-    print("🚀 Jenkins Demo Python App")
+    print("Jenkins Demo Python App")
     print(greet("Jenkins"))
     print(f"2 + 3 = {add(2, 3)}")
     print(f"4 * 5 = {multiply(4, 5)}")

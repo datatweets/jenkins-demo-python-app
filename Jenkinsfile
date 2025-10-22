@@ -13,14 +13,13 @@ pipeline {
     }
     
     environment {
-        JENKINS_URL = 'https://delores-lordlier-vania.ngrok-free.dev'
         PYTHONPATH = "${WORKSPACE}/src"
     }
     
     stages {
         stage('Checkout') {
             steps {
-                echo "🔄 Checking out code from ${params.BRANCH} branch..."
+                echo "Checking out code from ${params.BRANCH} branch..."
                 checkout scm
                 
                 script {
@@ -38,15 +37,15 @@ pipeline {
                     ).trim()
                 }
                 
-                echo "✅ Latest commit: ${env.GIT_COMMIT_MSG}"
-                echo "📝 Author: ${env.GIT_AUTHOR}"
-                echo "🔗 Commit hash: ${env.GIT_COMMIT_HASH}"
+                echo "Latest commit: ${env.GIT_COMMIT_MSG}"
+                echo "Author: ${env.GIT_AUTHOR}"
+                echo "Commit hash: ${env.GIT_COMMIT_HASH}"
             }
         }
         
         stage('Create Virtual Environment') {
             steps {
-                echo "🔧 Creating Python virtual environment..."
+                echo "Creating Python virtual environment..."
                 sh '''
                     # Remove existing venv if it exists to ensure clean state
                     rm -rf .venv
@@ -57,7 +56,7 @@ pipeline {
                     elif command -v python >/dev/null 2>&1; then
                         PYTHON_CMD=python
                     else
-                        echo "❌ No Python interpreter found!"
+                        echo "ERROR: No Python interpreter found!"
                         exit 1
                     fi
                     
@@ -77,18 +76,18 @@ pipeline {
                     # Activate and upgrade pip
                     . .venv/bin/activate
                     python -m pip install --upgrade pip setuptools wheel
-                    echo "✅ Virtual environment ready"
+                    echo "Virtual environment ready"
                 '''
             }
         }
         
         stage('Install Dependencies') {
             steps {
-                echo "📦 Installing dependencies from requirements.txt..."
+                echo "Installing dependencies from requirements.txt..."
                 sh '''
                     . .venv/bin/activate
                     pip install -r requirements.txt
-                    echo "✅ Dependencies installed"
+                    echo "Dependencies installed"
                     pip list
                 '''
             }
@@ -96,29 +95,29 @@ pipeline {
         
         stage('Code Quality - Linting') {
             steps {
-                echo "� Running pylint for code quality analysis..."
+                echo "Running pylint for code quality analysis..."
                 sh '''
                     . .venv/bin/activate
                     pylint src/ || true
-                    echo "✅ Linting completed"
+                    echo "Linting completed"
                 '''
             }
         }
         
         stage('Code Formatting Check') {
             steps {
-                echo "📐 Checking code formatting with black..."
+                echo "Checking code formatting with black..."
                 sh '''
                     . .venv/bin/activate
                     black --check --diff src/ tests/ || true
-                    echo "✅ Code formatting check completed"
+                    echo "Code formatting check completed"
                 '''
             }
         }
         
         stage('Unit Tests') {
             steps {
-                echo "🧪 Running unit tests with coverage..."
+                echo "Running unit tests with coverage..."
                 sh '''
                     . .venv/bin/activate
                     mkdir -p build/artifacts
@@ -130,14 +129,14 @@ pipeline {
                                    --cov-report=xml:build/artifacts/coverage.xml \
                                    --cov-report=term
                     
-                    echo "✅ Tests completed"
+                    echo "Tests completed"
                 '''
             }
         }
         
         stage('Build Artifacts') {
             steps {
-                echo "� Building application artifacts..."
+                echo "Building application artifacts..."
                 sh '''
                     . .venv/bin/activate
                     mkdir -p build/artifacts
@@ -156,14 +155,14 @@ pipeline {
                     echo "Author: ${GIT_AUTHOR}" >> build/artifacts/build-info.txt
                     echo "Date: $(date)" >> build/artifacts/build-info.txt
                     
-                    echo "✅ Artifacts built successfully"
+                    echo "Artifacts built successfully"
                 '''
             }
         }
         
         stage('Security Scan') {
             steps {
-                echo "🔒 Running security checks with bandit..."
+                echo "Running security checks with bandit..."
                 sh '''
                     . .venv/bin/activate
                     mkdir -p build/artifacts
@@ -174,7 +173,7 @@ pipeline {
                     bandit -r src/ -f json -o build/artifacts/bandit-report.json || true
                     bandit -r src/ -f txt || true
                     
-                    echo "✅ Security scan completed"
+                    echo "Security scan completed"
                 '''
             }
         }
@@ -184,7 +183,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                echo "🚀 Deploying to ${params.ENVIRONMENT}..."
+                echo "Deploying to ${params.ENVIRONMENT}..."
                 sh '''
                     . .venv/bin/activate
                     chmod +x ./scripts/deploy-${ENVIRONMENT}.sh
@@ -195,12 +194,12 @@ pipeline {
         
         stage('Health Check') {
             steps {
-                echo "💚 Running application health check..."
+                echo "Running application health check..."
                 sh '''
                     . .venv/bin/activate
                     export PYTHONPATH="${WORKSPACE}/src:${PYTHONPATH}"
                     python src/app.py
-                    echo "✅ Application health check passed"
+                    echo "Application health check passed"
                 '''
             }
         }
@@ -210,11 +209,11 @@ pipeline {
                 expression { params.ENVIRONMENT == 'prod' }
             }
             steps {
-                echo "🧹 Cleaning up virtual environment cache..."
+                echo "Cleaning up virtual environment cache..."
                 sh '''
                     . .venv/bin/activate
                     pip cache purge || true
-                    echo "✅ Cache cleaned"
+                    echo "Cache cleaned"
                 '''
             }
         }
@@ -222,7 +221,7 @@ pipeline {
     
     post {
         always {
-            echo "📋 Collecting build artifacts..."
+            echo "Collecting build artifacts..."
             
             // Publish test results
             junit testResults: 'build/artifacts/test-results.xml', 
@@ -236,7 +235,7 @@ pipeline {
             sh '''
                 if [ -f .venv/bin/activate ]; then
                     . .venv/bin/activate
-                    echo "📊 Python Environment Info:"
+                    echo "Python Environment Info:"
                     python --version
                     pip --version
                     echo "Installed packages:"
@@ -248,18 +247,21 @@ pipeline {
         }
         
         success {
-            echo "✅ Pipeline completed successfully!"
-            echo "📍 View at: ${JENKINS_URL}/job/jenkins-demo-python-app/${BUILD_NUMBER}/"
-            echo "📊 Coverage Report: ${JENKINS_URL}/job/jenkins-demo-python-app/${BUILD_NUMBER}/Code_Coverage_Report/"
+            echo "Pipeline completed successfully!"
+            echo "Build URL: ${BUILD_URL}"
+            echo "Coverage Report: Check archived artifacts -> build/artifacts/htmlcov/index.html"
+            echo "Test Results: ${BUILD_URL}testReport/"
+            echo "Artifacts: ${BUILD_URL}artifact/"
         }
         
         failure {
-            echo "❌ Pipeline failed!"
-            echo "📍 View logs at: ${JENKINS_URL}/job/jenkins-demo-python-app/${BUILD_NUMBER}/console"
+            echo "Pipeline failed!"
+            echo "Build URL: ${BUILD_URL}"
+            echo "Console Logs: ${BUILD_URL}console"
         }
         
         unstable {
-            echo "⚠️ Pipeline is unstable (tests failed)"
+            echo "WARNING: Pipeline is unstable (tests failed)"
         }
     }
 }

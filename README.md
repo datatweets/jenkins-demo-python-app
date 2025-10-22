@@ -4,17 +4,36 @@ A sample Python application demonstrating CI/CD pipeline with Jenkins on Google 
 
 ## Features
 
-- ✅ Python virtual environment (.venv) isolation
-- ✅ Unit testing with pytest
-- ✅ Code coverage reporting
-- ✅ Code quality analysis with pylint
-- ✅ Security scanning with bandit
-- ✅ Code formatting check with black
-- ✅ Distribution packages (sdist, wheel)
-- ✅ Jenkins CI/CD integration
-- ✅ Multi-environment deployment (dev, staging, prod)
+- Python virtual environment (.venv) isolation
+- Unit testing with pytest
+- Code coverage reporting
+- Code quality analysis with pylint
+- Security scanning with bandit
+- Code formatting check with black
+- Distribution packages (sdist, wheel)
+- Jenkins CI/CD integration
+- Multi-environment deployment (dev, staging, prod)
 
 ## Project Structure
+```
+.
+|-- src/
+|   +-- app.py                 # Main application
+|-- tests/
+|   +-- test_app.py            # Unit tests
+|-- scripts/
+|   |-- deploy-dev.sh          # Dev deployment script
+|   |-- deploy-staging.sh      # Staging deployment script
+|   +-- deploy-prod.sh         # Production deployment script
+|-- build/
+|   +-- artifacts/             # Build output (generated)
+|-- .venv/                     # Virtual environment (generated)
+|-- Jenkinsfile                # Jenkins pipeline definition
+|-- requirements.txt           # Python dependencies
+|-- setup.py                   # Package setup
+|-- pytest.ini                 # Pytest configuration
++-- .pylintrc                  # Pylint configuration
+```
 ```
 .
 ├── src/
@@ -151,18 +170,56 @@ pip install --upgrade -r requirements.txt
 pip freeze > requirements.txt
 ```
 
-## Build Artifacts Generated
+## Accessing Build Reports & Artifacts
 
-| File | Purpose |
-|------|---------|
-| `test-results.xml` | JUnit format test results |
+After a successful Jenkins build, you can access various reports and artifacts:
+
+### How to Access Reports
+
+1. **Go to your Jenkins build page**: `http://your-jenkins-url/job/jenkins-demo-python-app/[BUILD_NUMBER]/`
+2. **Navigate to different sections**:
+
+#### Test Reports
+- Click **"Test Result"** in the left sidebar
+- View detailed test results, trends, and failure reports
+- URL: `[BUILD_URL]/testReport/`
+
+#### Build Artifacts
+- Click **"Build Artifacts"** in the left sidebar  
+- Download or view all generated files
+- URL: `[BUILD_URL]/artifact/`
+
+#### Coverage Reports
+- Go to **Build Artifacts** → `build/artifacts/htmlcov/`
+- Click on `index.html` to view interactive coverage report
+- Shows line-by-line coverage with color coding
+
+#### Security Scan Results  
+- Go to **Build Artifacts** → `build/artifacts/`
+- Download `bandit-report.json` for detailed security analysis
+
+#### Console Output
+- Click **"Console Output"** to see full build logs
+- URL: `[BUILD_URL]/console`
+
+### Build Artifacts Generated
+
+| File/Directory | Purpose |
+|----------------|---------|
+| `test-results.xml` | JUnit format test results for Jenkins integration |
 | `coverage.xml` | Code coverage in XML format |
-| `htmlcov/` | Interactive HTML coverage report |
-| `bandit-report.json` | Security scan results |
-| `pylint-report.txt` | Code quality analysis |
+| `htmlcov/index.html` | **Interactive HTML coverage report** |
+| `bandit-report.json` | Security scan results (JSON format) |
+| `build-info.txt` | Build metadata (build number, commit, author) |
 | `*.tar.gz` | Source distribution package |
 | `*.whl` | Wheel distribution package |
-| `source.tar.gz` | Complete source code archive |
+
+### Quick Access Tips
+
+- **Bookmark your Jenkins job**: `http://your-jenkins-url/job/jenkins-demo-python-app/`
+- **Latest build**: Add `/lastBuild/` to quickly access the most recent build
+- **Coverage trends**: Jenkins tracks coverage over time in the main job page
+- **Build history**: Click on build numbers in the left sidebar for historical builds
 
 ## Build Pipeline Triggers
 
