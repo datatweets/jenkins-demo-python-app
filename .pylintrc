@@ -1,0 +1,7 @@
+[MASTER]
+disable=
+    missing-docstring,
+    too-few-public-methods,
+
+[FORMAT]
+max-line-length=100
