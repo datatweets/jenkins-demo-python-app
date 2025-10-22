@@ -15,7 +15,8 @@ A sample Python application demonstrating CI/CD pipeline with Jenkins on Google 
 - Multi-environment deployment (dev, staging, prod)
 
 ## Project Structure
-```
+
+```text
 .
 |-- src/
 |   +-- app.py                 # Main application
@@ -32,34 +33,27 @@ A sample Python application demonstrating CI/CD pipeline with Jenkins on Google 
 |-- requirements.txt           # Python dependencies
 |-- setup.py                   # Package setup
 |-- pytest.ini                 # Pytest configuration
-+-- .pylintrc                  # Pylint configuration
-```
-```
-.
-├── src/
-│   └── app.py                 # Main application
-├── tests/
-│   └── test_app.py            # Unit tests
-├── scripts/
-│   ├── deploy-dev.sh          # Dev deployment script
-│   ├── deploy-staging.sh      # Staging deployment script
-│   └── deploy-prod.sh         # Production deployment script
-├── build/
-│   └── artifacts/             # Build output (generated)
-├── .venv/                     # Virtual environment (generated)
-├── Jenkinsfile                # Jenkins pipeline definition
-├── requirements.txt           # Python dependencies
-├── setup.py                   # Package setup
-├── pytest.ini                 # Pytest configuration
-├── .pylintrc                  # Pylint configuration
-├── .gitignore                 # Git ignore patterns
-└── README.md                  # This file
+|-- .pylintrc                  # Pylint configuration
+|-- .gitignore                 # Git ignore patterns
+|-- tutorial.md                # Jenkins setup tutorial
++-- README.md                  # This file
 ```
 
+## Quick Start
+
+For detailed setup instructions, see [tutorial.md](tutorial.md) which includes:
+
+- How to set up Jenkins with GitHub integration
+- Configuring pipeline parameters
+- Running your first build
+- Accessing build reports and artifacts
+- Jenkins CLI commands
+
 ## Local Development Setup
+
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/jenkins-demo-python-app.git
+git clone https://github.com/datatweets/jenkins-demo-python-app.git
 cd jenkins-demo-python-app
 
 # Create virtual environment
@@ -84,7 +78,7 @@ pip list
 pytest tests/ -v
 
 # Run the application
-python3 src/app.py
+python src/app.py
 
 # Run linting
 pylint src/app.py
@@ -104,6 +98,7 @@ deactivate
 ### What is .venv?
 
 `.venv` is a Python virtual environment that isolates project dependencies. Each project has its own `.venv` folder containing:
+
 - Python interpreter
 - pip package manager
 - Installed packages (from requirements.txt)
@@ -118,6 +113,7 @@ deactivate
 ### Important: .venv is NOT committed to Git
 
 The `.gitignore` file excludes `.venv/` so it won't be pushed to GitHub. Instead:
+
 - Commit only `requirements.txt`
 - CI/CD pipeline recreates `.venv` automatically
 - Each developer creates their own `.venv` locally
@@ -138,15 +134,19 @@ The `.gitignore` file excludes `.venv/` so it won't be pushed to GitHub. Instead
 
 ## Jenkins Setup
 
-1. Create a new Pipeline job in Jenkins
-2. Configure SCM to point to this repository
-3. Set pipeline script path to `Jenkinsfile`
-4. Configure GitHub credentials with personal access token
-5. Build with parameters (BRANCH and ENVIRONMENT)
+See [tutorial.md](tutorial.md) for complete step-by-step instructions on:
+
+1. Setting up GitHub Personal Access Token
+2. Creating Jenkins Pipeline job
+3. Configuring job parameters (BRANCH, ENVIRONMENT)
+4. Connecting Jenkins to GitHub repository
+5. Running builds via UI or CLI
+6. Accessing build results and artifacts
 
 ## Managing Dependencies
 
 ### Add a new package
+
 ```bash
 # Activate .venv
 source .venv/bin/activate
@@ -164,6 +164,7 @@ git push origin main
 ```
 
 ### Update all packages
+
 ```bash
 source .venv/bin/activate
 pip install --upgrade -r requirements.txt
@@ -224,12 +225,14 @@ After a successful Jenkins build, you can access various reports and artifacts:
 ## Build Pipeline Triggers
 
 ### Via Jenkins UI
+
 1. Click "Build with Parameters"
 2. Select BRANCH (default: main)
 3. Select ENVIRONMENT (dev/staging/prod)
 4. Click "Build"
 
 ### Via Jenkins CLI
+
 ```bash
 java -jar jenkins-cli.jar -s https://your-jenkins-url/ \
   -auth username:token \
@@ -238,13 +241,43 @@ java -jar jenkins-cli.jar -s https://your-jenkins-url/ \
   -p ENVIRONMENT=dev
 ```
 
-## Environment Variables in Pipeline
+## Pipeline Configuration
 
-- `VENV_DIR` = `${WORKSPACE}/.venv`
-- `VENV_BIN` = `${WORKSPACE}/.venv/bin`
-- `PYTHONPATH` = `${WORKSPACE}/src:${PYTHONPATH}`
+### Environment Variables
 
-All tools (pytest, pylint, black, bandit) are run using `. ${VENV_BIN}/activate`
+The pipeline uses the following environment variable:
+
+- `PYTHONPATH` = `${WORKSPACE}/src`
+
+### Virtual Environment Paths
+
+The pipeline creates and uses `.venv` in the workspace:
+
+- Virtual environment directory: `${WORKSPACE}/.venv`
+- Virtual environment binaries: `${WORKSPACE}/.venv/bin`
+- Activation: `. .venv/bin/activate`
+
+All tools (pytest, pylint, black, bandit) are executed within the activated virtual environment.
+
+## Key Changes from Original
+
+### Removed Dependencies on External URLs
+
+- No hardcoded Jenkins URLs (uses Jenkins built-in `${BUILD_URL}` variable)
+- Removed ngrok-specific configuration
+- Works with any Jenkins instance
+
+### Simplified Virtual Environment Handling
+
+- Uses relative paths (`.venv/bin/activate` instead of `${VENV_BIN}/activate`)
+- More robust Python detection with fallback
+- Handles missing `ensurepip` gracefully
+
+### Clean Output
+
+- All emoji characters removed from pipeline output
+- Professional, system-compatible text messages
+- Better error messages with clear prefixes (ERROR, WARNING)
 
 ## License
 
