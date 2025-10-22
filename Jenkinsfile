@@ -13,11 +13,8 @@ pipeline {
     }
     
     environment {
-        ARTIFACT_DIR = "${WORKSPACE}/build/artifacts"
         JENKINS_URL = 'https://delores-lordlier-vania.ngrok-free.dev'
-        VENV_DIR = "${WORKSPACE}/.venv"
-        VENV_BIN = "${WORKSPACE}/.venv/bin"
-        PYTHONPATH = "${WORKSPACE}/src:${PYTHONPATH}"
+        PYTHONPATH = "${WORKSPACE}/src"
     }
     
     stages {
@@ -51,17 +48,35 @@ pipeline {
             steps {
                 echo "🔧 Creating Python virtual environment..."
                 sh '''
-                    # Check if .venv exists, if not create it
-                    if [ ! -d "${VENV_DIR}" ]; then
-                        echo "Creating new virtual environment..."
-                        python3 -m venv ${VENV_DIR}
+                    # Remove existing venv if it exists to ensure clean state
+                    rm -rf .venv
+                    
+                    # Check if python3 is available, fallback to python
+                    if command -v python3 >/dev/null 2>&1; then
+                        PYTHON_CMD=python3
+                    elif command -v python >/dev/null 2>&1; then
+                        PYTHON_CMD=python
                     else
-                        echo "Virtual environment already exists, reusing it..."
+                        echo "❌ No Python interpreter found!"
+                        exit 1
+                    fi
+                    
+                    echo "Using Python: $PYTHON_CMD"
+                    $PYTHON_CMD --version
+                    
+                    # Create virtual environment
+                    echo "Creating new virtual environment..."
+                    $PYTHON_CMD -m venv .venv --without-pip
+                    
+                    # Manually install pip if needed
+                    if [ ! -f .venv/bin/pip ]; then
+                        echo "Installing pip manually..."
+                        curl -s https://bootstrap.pypa.io/get-pip.py | .venv/bin/python
                     fi
                     
                     # Activate and upgrade pip
-                    . ${VENV_BIN}/activate
-                    python3 -m pip install --upgrade pip setuptools wheel
+                    . .venv/bin/activate
+                    python -m pip install --upgrade pip setuptools wheel
                     echo "✅ Virtual environment ready"
                 '''
             }
@@ -71,7 +86,7 @@ pipeline {
             steps {
                 echo "📦 Installing dependencies from requirements.txt..."
                 sh '''
-                    . ${VENV_BIN}/activate
+                    . .venv/bin/activate
                     pip install -r requirements.txt
                     echo "✅ Dependencies installed"
                     pip list
@@ -81,40 +96,39 @@ pipeline {
         
         stage('Code Quality - Linting') {
             steps {
-                echo "📊 Running pylint for code quality..."
+                echo "� Running pylint for code quality analysis..."
                 sh '''
-                    mkdir -p ${ARTIFACT_DIR}
-                    . ${VENV_BIN}/activate
-                    
-                    pylint src/app.py --exit-zero --output-format=parseable > ${ARTIFACT_DIR}/pylint-report.txt || true
-                    cat ${ARTIFACT_DIR}/pylint-report.txt
+                    . .venv/bin/activate
+                    pylint src/ || true
+                    echo "✅ Linting completed"
                 '''
             }
         }
         
         stage('Code Formatting Check') {
             steps {
-                echo "✨ Checking code formatting with black..."
+                echo "📐 Checking code formatting with black..."
                 sh '''
-                    . ${VENV_BIN}/activate
-                    black --check src/ tests/ || echo "Code formatting issues found (non-blocking)"
+                    . .venv/bin/activate
+                    black --check --diff src/ tests/ || true
+                    echo "✅ Code formatting check completed"
                 '''
             }
         }
         
         stage('Unit Tests') {
             steps {
-                echo "🧪 Running unit tests with pytest..."
+                echo "🧪 Running unit tests with coverage..."
                 sh '''
-                    . ${VENV_BIN}/activate
-                    mkdir -p ${ARTIFACT_DIR}
+                    . .venv/bin/activate
+                    mkdir -p build/artifacts
                     
-                    pytest tests/ -v \
-                        --junit-xml=${ARTIFACT_DIR}/test-results.xml \
-                        --cov=src \
-                        --cov-report=xml:${ARTIFACT_DIR}/coverage.xml \
-                        --cov-report=html:${ARTIFACT_DIR}/htmlcov \
-                        --cov-report=term-missing
+                    # Run tests with coverage
+                    pytest tests/ --junitxml=build/artifacts/test-results.xml \
+                                   --cov=src \
+                                   --cov-report=html:build/artifacts/htmlcov \
+                                   --cov-report=xml:build/artifacts/coverage.xml \
+                                   --cov-report=term
                     
                     echo "✅ Tests completed"
                 '''
@@ -123,31 +137,26 @@ pipeline {
         
         stage('Build Artifacts') {
             steps {
-                echo "📦 Creating distribution artifacts..."
+                echo "� Building application artifacts..."
                 sh '''
-                    . ${VENV_BIN}/activate
-                    mkdir -p ${ARTIFACT_DIR}
+                    . .venv/bin/activate
+                    mkdir -p build/artifacts
                     
-                    # Create source distribution
-                    python3 setup.py sdist --dist-dir=${ARTIFACT_DIR}
+                    # Create distribution package
+                    python setup.py sdist bdist_wheel
                     
-                    # Create wheel distribution
-                    python3 -m pip install wheel --quiet
-                    python3 setup.py bdist_wheel --dist-dir=${ARTIFACT_DIR}
+                    # Copy artifacts
+                    cp dist/*.tar.gz build/artifacts/ || true
+                    cp dist/*.whl build/artifacts/ || true
                     
-                    # Create a tarball of the entire source
-                    tar -czf ${ARTIFACT_DIR}/source.tar.gz \
-                        --exclude=.venv \
-                        --exclude=__pycache__ \
-                        --exclude=.pytest_cache \
-                        --exclude=.coverage \
-                        --exclude=htmlcov \
-                        --exclude=.git \
-                        .
+                    # Create version file
+                    echo "Build: ${BUILD_NUMBER}" > build/artifacts/build-info.txt
+                    echo "Commit: ${GIT_COMMIT_HASH}" >> build/artifacts/build-info.txt
+                    echo "Branch: main" >> build/artifacts/build-info.txt
+                    echo "Author: ${GIT_AUTHOR}" >> build/artifacts/build-info.txt
+                    echo "Date: $(date)" >> build/artifacts/build-info.txt
                     
-                    # List all artifacts
-                    echo "📋 Artifacts created:"
-                    ls -lh ${ARTIFACT_DIR}/
+                    echo "✅ Artifacts built successfully"
                 '''
             }
         }
@@ -156,10 +165,13 @@ pipeline {
             steps {
                 echo "🔒 Running security checks with bandit..."
                 sh '''
-                    . ${VENV_BIN}/activate
-                    mkdir -p ${ARTIFACT_DIR}
+                    . .venv/bin/activate
+                    mkdir -p build/artifacts
                     
-                    bandit -r src/ -f json -o ${ARTIFACT_DIR}/bandit-report.json || true
+                    # Install bandit if not available
+                    pip install bandit || true
+                    
+                    bandit -r src/ -f json -o build/artifacts/bandit-report.json || true
                     bandit -r src/ -f txt || true
                     
                     echo "✅ Security scan completed"
@@ -174,7 +186,7 @@ pipeline {
             steps {
                 echo "🚀 Deploying to ${params.ENVIRONMENT}..."
                 sh '''
-                    . ${VENV_BIN}/activate
+                    . .venv/bin/activate
                     chmod +x ./scripts/deploy-${ENVIRONMENT}.sh
                     ./scripts/deploy-${ENVIRONMENT}.sh
                 '''
@@ -185,9 +197,9 @@ pipeline {
             steps {
                 echo "💚 Running application health check..."
                 sh '''
-                    . ${VENV_BIN}/activate
+                    . .venv/bin/activate
                     export PYTHONPATH="${WORKSPACE}/src:${PYTHONPATH}"
-                    python3 src/app.py
+                    python src/app.py
                     echo "✅ Application health check passed"
                 '''
             }
@@ -200,7 +212,7 @@ pipeline {
             steps {
                 echo "🧹 Cleaning up virtual environment cache..."
                 sh '''
-                    . ${VENV_BIN}/activate
+                    . .venv/bin/activate
                     pip cache purge || true
                     echo "✅ Cache cleaned"
                 '''
@@ -213,29 +225,25 @@ pipeline {
             echo "📋 Collecting build artifacts..."
             
             // Publish test results
-            junit testResults: '${ARTIFACT_DIR}/test-results.xml', 
+            junit testResults: 'build/artifacts/test-results.xml', 
                   allowEmptyResults: true
             
-            // Publish code coverage
-            publishHTML([
-                reportDir: '${ARTIFACT_DIR}/htmlcov',
-                reportFiles: 'index.html',
-                reportName: 'Code Coverage Report',
-                allowMissing: true
-            ])
-            
-            // Archive all artifacts
+            // Archive all artifacts (including coverage reports)
             archiveArtifacts artifacts: 'build/artifacts/**', 
                             allowEmptyArchive: true
             
             // Show environment info
             sh '''
-                . ${VENV_BIN}/activate
-                echo "📊 Python Environment Info:"
-                python3 --version
-                pip --version
-                echo "Installed packages:"
-                pip list
+                if [ -f .venv/bin/activate ]; then
+                    . .venv/bin/activate
+                    echo "📊 Python Environment Info:"
+                    python --version
+                    pip --version
+                    echo "Installed packages:"
+                    pip list
+                else
+                    echo "Virtual environment not available for cleanup"
+                fi
             '''
         }
         
