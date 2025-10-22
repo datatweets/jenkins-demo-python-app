@@ -167,7 +167,7 @@ pipeline {
             }
         }
         
-        stage('Deploy to ' + params.ENVIRONMENT) {
+        stage("Deploy to ${params.ENVIRONMENT}") {
             when {
                 branch 'main'
             }
